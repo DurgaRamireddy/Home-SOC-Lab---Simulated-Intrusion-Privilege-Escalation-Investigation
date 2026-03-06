@@ -81,7 +81,10 @@ These patterns clearly demonstrate brute-force attack activity.
 User activity and sessions were reviewed using: </br>
        last </br>
        who
-
+These commands helped verify:
+- Active login sessions
+- Historical login attempts
+- Potential unauthorized access
 ## 5. Privilege Escalation Simulation
 A controlled misconfiguration was introduced to simulate a privilege escalation vulnerability.
 
