@@ -80,7 +80,7 @@ These patterns clearly demonstrate brute-force attack activity.
 ## 4. Session Investigation
 User activity and sessions were reviewed using: </br>
        last </br>
-       who
+       who </br>
 These commands helped verify:
 - Active login sessions
 - Historical login attempts
