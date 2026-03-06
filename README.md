@@ -101,7 +101,7 @@ Exploitation: </br>
    whoami
 
 Result: </br>
-   root
+   root </br>
 This confirmed **successful privilege escalation.**
 
 ## Log Evidence of Escalation
@@ -111,7 +111,8 @@ Example detection: </br>
 sudo grep sudo /var/log/auth.log
 
 Example log entry: </br>
-sudo: testuser : COMMAND=/usr/bin/find
+sudo: </br>
+testuser : COMMAND=/usr/bin/find </br>
 
 This provides a clear **Indicator of Compromise** for escalation activity.
 
